@@ -53,27 +53,26 @@ class CDT_GUI:
         self.back.pack(fill=tk.BOTH, expand=1) #Expand the frame to fill the root window
         
         # PLOT WINDOW 1
-
         self.fig1 = Figure(figsize=(5, 4), dpi=100, tight_layout=True)
-        t = np.arange(0, 3, .01)
         self.ax1 = self.fig1.add_subplot(111)
-        self.ax1.plot(t, 2*np.sin(2*np.pi*t))
         
         self.plotFrame1 = tk.Frame(master=self.back)
         self.plotFrame1.grid(row=2, column=0, rowspan=2)
-        self.canvas1 = FigureCanvasTkAgg(self.fig1, master=self.plotFrame1)  # A tk.DrawingArea.
+        self.plot1SubFrame = tk.Frame(master=self.plotFrame1)
+        self.plot1SubFrame.grid(row=0, column=0, columnspan=2)
+        self.canvas1 = FigureCanvasTkAgg(self.fig1, master=self.plot1SubFrame)  # A tk.DrawingArea.
         self.canvas1.draw()
         self.canvas1.get_tk_widget().pack()
-        self.toolbar1 = NavigationToolbar2Tk(self.canvas1, self.plotFrame1)
+        self.toolbar1 = NavigationToolbar2Tk(self.canvas1, self.plot1SubFrame)
         self.toolbar1.update()
         
         self.p1_conditional_controls = tk.Frame(master=self.plotFrame1)
-        self.p1_conditional_controls.pack() # stuff like the play button for the animation
+        self.p1_conditional_controls.grid(row=2, column=0, columnspan=2) # stuff like the play button for the animation
         # navigation toolbars use pack() internally, so you can't place them with grid
         # so you create a frame that's a child of the main frame, position the *child frame* using grid, 
         # and the toolbar packs itself within that frame...
         
-        tk.Label(master=self.plotFrame1, text="Plot Type").pack()
+        tk.Label(master=self.plotFrame1, text="Plot Type").grid(row=1, column=0)
         self.p1TypeVar = tk.StringVar()
         self.p1TypeVar.trace_add("write", self._change_p1)
         self.p1types = ['animation', 'arm load', 'projectile path', 
@@ -81,7 +80,7 @@ class CDT_GUI:
         self.prevP1Type = None # necessary because destroy doesn't properly destroy all widgets in p1 cond frame
         self.p1TypeVar.set(self.p1types[0])
         self.p1TypeMenu = tk.OptionMenu(self.plotFrame1, self.p1TypeVar, *self.p1types)
-        self.p1TypeMenu.pack()
+        self.p1TypeMenu.grid(row=1, column=1)
         # PLOT WINDOW 1
         
         # PLOT WINDOW 2
@@ -90,14 +89,16 @@ class CDT_GUI:
         
         self.plotFrame2 = tk.Frame(master=self.back)
         self.plotFrame2.grid(row=2, column=2, rowspan=2)
-        self.canvas2 = FigureCanvasTkAgg(self.fig2, master=self.plotFrame2)  # A tk.DrawingArea.
+        self.plot2SubFrame = tk.Frame(master=self.plotFrame2)
+        self.plot2SubFrame.grid(row=0, column=0)
+        self.canvas2 = FigureCanvasTkAgg(self.fig2, master=self.plot2SubFrame)  # A tk.DrawingArea.
         self.canvas2.draw()
         self.canvas2.get_tk_widget().pack()
-        self.toolbar2 = NavigationToolbar2Tk(self.canvas2, self.plotFrame2)
+        self.toolbar2 = NavigationToolbar2Tk(self.canvas2, self.plot2SubFrame)
         self.toolbar2.update()
         
         self.p2ControlF = tk.Frame(master=self.plotFrame2) # child frame for plot 2 controls
-        self.p2ControlF.pack()
+        self.p2ControlF.grid(row=1, column=0)
         tk.Label(master=self.p2ControlF, text="x axis").grid(row=0, column=0)
         self.p2xVar = tk.StringVar()
         self.p2xOpts = ['time', 'theta', 'psi', 'projectile velocity']
@@ -112,9 +113,7 @@ class CDT_GUI:
         self.p2yVar.set(self.p2yOpts[0])
         self.p2yVar.trace_add("write", self._change_p2)
         self.p2yMenu = tk.OptionMenu(self.p2ControlF, self.p2yVar, *self.p2yOpts)
-        self.p2yMenu.grid(row=0, column=3)
-        
-        
+        self.p2yMenu.grid(row=0, column=3)        
         # PLOT WINDOW 2
         
         # MAIN CONTROLS
@@ -139,7 +138,7 @@ class CDT_GUI:
         
         # SAVE AND LOAD BUTTONS
         self.saveFrame = tk.Frame(master=self.back)
-        self.saveFrame.grid(row=0, column=0, stick=tk.W)
+        self.saveFrame.grid(row=0, column=0, sticky=tk.NW)
         self.saveBtn = tk.Button(master=self.saveFrame, text="Save Design", command=self._save_design)
         self.saveBtn.grid(row=0, column=0)
         
@@ -261,7 +260,7 @@ class CDT_GUI:
         
         # TORQUE CONTROLS
         self.tcFrame = tk.LabelFrame(master=self.back, text="Torque Source")
-        self.tcFrame.grid(row=1, column=2)
+        self.tcFrame.grid(row=0, column=2, rowspan=2)
         
         tk.Label(master=self.tcFrame, text="Torque Specification Type").grid(row=0, column=0)
         self.tsTypeVar = tk.StringVar() # constructor argument just specifies the Tk instance, and we only have 1
@@ -603,7 +602,7 @@ class CDT_GUI:
     def _p1destroyer(self):
         self.p1_conditional_controls.destroy()
         self.p1_conditional_controls = tk.Frame(master=self.plotFrame1)
-        self.p1_conditional_controls.pack()
+        self.p1_conditional_controls.grid(row=2, column=0, columnspan=2)
             
     def _change_p1(self, *args):
         # all the "weird" plots that draw multiple lines or mess with the axes / figures
@@ -750,11 +749,11 @@ class CDT_GUI:
                         
             self._p1destroyer()            
             tk.Button(master=self.p1_conditional_controls, 
-                      text="Save Load Data", command=sarl).grid(row=1, column=2)
+                      text="Save Load Data", command=sarl).grid(row=0, column=2)
             default_dir = os.path.join(toplevel_path, "saved_designs")
-            tk.Label(master=self.p1_conditional_controls, text="number of points").grid(row=0, column=2)
+            tk.Label(master=self.p1_conditional_controls, text="number of points").grid(row=0, column=0)
             arlSaveNE = tk.Entry(master=self.p1_conditional_controls)
-            arlSaveNE.grid(row=0, column=3)
+            arlSaveNE.grid(row=0, column=1)
             arlSaveNE.insert(0, "20")
             self.fig1.clear()
             self.ax1 = self.fig1.add_subplot(111)
@@ -823,10 +822,10 @@ class CDT_GUI:
         self._p1destroyer()
         self.play_button = tk.Button(master=self.p1_conditional_controls, text="PLAY", 
                                      command=self._run_animation)
-        self.play_button.pack()
-        tk.Label(master=self.p1_conditional_controls, text="Animation Length").pack()
-        self.aniLengthE = tk.Entry(master=self.p1_conditional_controls)
-        self.aniLengthE.pack()
+        self.play_button.grid(row=0, column=2)
+        tk.Label(master=self.p1_conditional_controls, text="Animation Length (s)").grid(row=0, column=0)
+        self.aniLengthE = tk.Entry(master=self.p1_conditional_controls, width=8)
+        self.aniLengthE.grid(row=0, column=1)
         self.aniLengthE.insert(0, "2")
         
                     
