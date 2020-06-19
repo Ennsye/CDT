@@ -1,3 +1,4 @@
 logfile
 .ipynb_checkpoints
 **/__pycache__
+solution.pkl

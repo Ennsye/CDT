@@ -1,19 +1,18 @@
-import ctypes
-import os
-from pathlib import Path
-import sys
-import numpy as np
 import copy
-import time
+import ctypes
+import numpy as np
 from numpy import cos, sin
 from numpy.ctypeslib import ndpointer
+import os
+from pathlib import Path
+import pickle
 from scipy.optimize import minimize_scalar
 from scipy.optimize import minimize
+import sys
+import time
 import traceback
 
 import matplotlib.animation as animation
-#import matplotlib.pyplot as plt
-
 
 parent_path = Path(__file__).parents[1]
 if os.name == 'nt':
@@ -328,16 +327,21 @@ def dft_opt2(y0, dt, dp, tp, pfbounds, vpa_target, Iabounds, theta_target, platf
         H = D['H']
     return {'psi_sol': psi_sol, 'yf': D['yf'], 'Ia_opt': Ia_sol, 'tf': D['tf'], 'H': H}
     
-def solver_wrapper(solver, outpipe, *args, **kwargs):
+def solver_wrapper(solver, solfile, outpipe, *args, **kwargs):
+   # sol may be too big to fit in the outpipe. Since Python doesn't tell us what the size limits are, 
+   # or even acknowledge their existence, we write to file instead
     try:
         sol = solver(*args, **kwargs)
+        with open(solfile, 'wb') as f:
+            pickle.dump(sol, f)
+        outpipe.send(True) # solfile was written to
     except Exception as e:
         # possibly the cleverest thing I've ever done: traceback logs from multiproc! :D
         with open('logfile', 'a') as f:
             f.write('\n')
             f.write(str(e))
             f.write(traceback.format_exc())
-    outpipe.send(sol)
+        outpipe.send(False)
     return 0
 
 def y_hist(y0, dt, dp, tp, psif, N=0, platform=True):

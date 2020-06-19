@@ -871,7 +871,7 @@ class CDT_GUI:
             with open('logfile', 'a') as f:
                 f.write('terminating solve_proc due to timeout, t = ' + str(time.time() - self.t0) + '\n')
             self.solve_proc.terminate() # ran for too long
-            self.master.after(100, _check_solveproc) # next call will find the process dead and return
+            self.master.after(100, self._check_solveproc) # next call will find the process dead and return
         else:
             self.solver_runningB.set(True)
             self.cspcalls += 1
@@ -1063,12 +1063,13 @@ class CDT_GUI:
         self.dt = float(self.dtE.get()) # get this from simulation setup section
         self.p = self.platformVar.get() # is there a platform? (BooleanVar)
         # this is the value of platformVar that the PREVIOUS SIMULATION was run with
+        self.solname = "solution.pkl"
 
         if self.simTypeVar.get() == 'psi':   
             self.prev_solve_type = 'psi'
             psi_release = float(self.sccw['psi']['psif'].get())
-            solver_args = (CDTtools.dyn_core_tools.dyn_general, self.cps, self.y0, self.dt, self.dp, 
-                           self.tp, psi_release)
+            solver_args = (CDTtools.dyn_core_tools.dyn_general, self.solname, self.cps, self.y0, self.dt, 
+                           self.dp, self.tp, psi_release)
             solver_kwargs = {'verbose': False, 'platform': self.p, 'history': True}
            
         elif self.simTypeVar.get() == 'launch_angle':
@@ -1076,8 +1077,8 @@ class CDT_GUI:
             psibounds = (float(self.sccw['launch_angle']['psifmin'].get()), 
                          float(self.sccw['launch_angle']['psifmax'].get()))
             vpa_target = float(self.sccw['launch_angle']['vpa'].get())
-            solver_args = (CDTtools.dyn_core_tools.dft_vpastop, self.cps, self.y0, self.dt, self.dp,
-                          self.tp, psibounds, vpa_target)
+            solver_args = (CDTtools.dyn_core_tools.dft_vpastop, self.solname, self.cps, self.y0, self.dt, 
+                           self.dp, self.tp, psibounds, vpa_target)
             solver_kwargs = {'verbose': False, 'platform': self.p, 'history': True}
             
         elif self.simTypeVar.get() == 'sling_len_opt':
@@ -1088,8 +1089,8 @@ class CDT_GUI:
                      float(self.sccw['sling_len_opt']['lsmax'].get()))
             vpa_target = float(self.sccw['sling_len_opt']['vpa'].get())
             theta_target = float(self.sccw['sling_len_opt']['thetaf'].get())
-            solver_args = (CDTtools.dyn_core_tools.dft_opt1a, self.cps, self.y0, self.dt, self.dp,
-                          self.tp, psibounds, vpa_target, Lsbounds, theta_target)
+            solver_args = (CDTtools.dyn_core_tools.dft_opt1a, self.solname, self.cps, self.y0, self.dt, 
+                           self.dp, self.tp, psibounds, vpa_target, Lsbounds, theta_target)
             solver_kwargs = {'verbose': False, 'platform': self.p, 'history': True}
             
         elif self.simTypeVar.get() == 'arm_inertia_opt':
@@ -1100,8 +1101,8 @@ class CDT_GUI:
                      float(self.sccw['arm_inertia_opt']['aimax'].get()))
             vpa_target = float(self.sccw['arm_inertia_opt']['vpa'].get())
             theta_target = float(self.sccw['arm_inertia_opt']['thetaf'].get())
-            solver_args = (CDTtools.dyn_core_tools.dft_opt2, self.cps, self.y0, self.dt, self.dp,
-                          self.tp, psibounds, vpa_target, Iabounds, theta_target)
+            solver_args = (CDTtools.dyn_core_tools.dft_opt2, self.solname, self.cps, self.y0, self.dt, 
+                           self.dp, self.tp, psibounds, vpa_target, Iabounds, theta_target)
             solver_kwargs = {'verbose': False, 'platform': self.p, 'history': True}
             
         self.solve_proc = multiprocessing.Process(target=CDTtools.dyn_core_tools.solver_wrapper,
@@ -1115,59 +1116,65 @@ class CDT_GUI:
         # display results from the last simulation run and set self.sol for later use
         self.sol = None # keeps the animation from running again if there's no new solution
         if self.cpr.poll(0.1):
-            # YAY! We have a solution!
-            self.sol = self.cpr.recv() # this will be needed elsewhere for postproc
-            psif = self.sol['yf'][2]
-            theta_min_true = min(np.array(self.sol['H']['Y'])[:,0])
-            theta_min_guess = min(self.theta_range)
-            if self.prev_solve_type == 'psi':
-                extra_msg = ("Launch angle: " + 
-                         str(round(CDTtools.dyn_core_tools.vp_angle(self.sol['yf'], self.dp), self.rp)) + "\n")
-            elif self.prev_solve_type == 'launch_angle':
-                psibounds = (float(self.sccw['launch_angle']['psifmin'].get()), 
-                             float(self.sccw['launch_angle']['psifmax'].get()))
-                extra_msg = "Psi at release: " + str(round(psif, self.rp)) + "\n"
-                if np.isclose(psif, psibounds[0], atol=1e-3) or np.isclose(psif, psibounds[1], atol=1e-3):
-                    extra_msg = (extra_msg + "\nWarning: The target launch angle was not reachable given the"
-                                 " specified constraints on psi final\n\n")
-            elif self.prev_solve_type == 'sling_len_opt':
-                psibounds = (float(self.sccw['launch_angle']['psifmin'].get()), 
-                             float(self.sccw['launch_angle']['psifmax'].get()))
-                Lsbounds = (float(self.sccw['sling_len_opt']['lsmin'].get()), 
-                             float(self.sccw['sling_len_opt']['lsmax'].get()))
-                self.dp.Ls = self.sol['Ls_opt']
-                extra_msg = ("Psi at release: " + str(round(self.sol['yf'][2], self.rp)) + 
-                             "\nOptimized sling length: " + str(round(self.sol['Ls_opt'], self.rp)) + "\n")
-                if True in [np.isclose(psif, psibounds[0]), np.isclose(psif, psibounds[1]), 
-                           np.isclose(self.dp.Ls, Lsbounds[0]), np.isclose(self.dp.Ls, Lsbounds[1])]:
-                    extra_msg = (extra_msg + "\nWarning: The target launch angle and final arm angle were not "
-                                 "reachable given the specified constraints on psi final and sling length\n\n")
-            elif self.prev_solve_type == 'arm_inertia_opt':
-                psibounds = (float(self.sccw['launch_angle']['psifmin'].get()), 
-                             float(self.sccw['launch_angle']['psifmax'].get()))
-                Iabounds = (float(self.sccw['arm_inertia_opt']['aimin'].get()), 
-                             float(self.sccw['arm_inertia_opt']['aimax'].get()))
-                self.dp.Ia = self.sol['Ia_opt']
-                extra_msg = ("Psi at release: " + str(round(self.sol['yf'][2], self.rp)) + 
-                             "\nOptimized arm inertia: " + str(round(self.sol['Ia_opt'], self.rp)) + "\n")
-                if True in [np.isclose(psif, psibounds[0]), np.isclose(psif, psibounds[1]), 
-                           np.isclose(self.dp.Ia, Iabounds[0]), np.isclose(self.dp.Ia, Iabounds[1])]:
-                    extra_msg = (extra_msg + "\nWarning: The target launch angle and final arm angle were not " 
-                                 "reachable given the specified constraints on psi final and arm inertia\n\n")
-            else:
-                extra_msg = "NOT YET IMPLEMENTED"
+            if self.cpr.recv():
+                # True if the solver finished without error
+                # YAY! We have a solution!
+                with open(self.solname, 'rb') as f:
+                    self.sol = pickle.load(f) # can't use the pipe directly d.t. potential large size of soln
+                # self.sol = self.cpr.recv() # this will be needed elsewhere for postproc
+                psif = self.sol['yf'][2]
+                theta_min_true = min(np.array(self.sol['H']['Y'])[:,0])
+                theta_min_guess = min(self.theta_range)
+                if self.prev_solve_type == 'psi':
+                    extra_msg = ("Launch angle: " + 
+                             str(round(CDTtools.dyn_core_tools.vp_angle(self.sol['yf'], self.dp), self.rp)) + "\n")
+                elif self.prev_solve_type == 'launch_angle':
+                    psibounds = (float(self.sccw['launch_angle']['psifmin'].get()), 
+                                 float(self.sccw['launch_angle']['psifmax'].get()))
+                    extra_msg = "Psi at release: " + str(round(psif, self.rp)) + "\n"
+                    if np.isclose(psif, psibounds[0], atol=1e-3) or np.isclose(psif, psibounds[1], atol=1e-3):
+                        extra_msg = (extra_msg + "\nWarning: The target launch angle was not reachable given the"
+                                     " specified constraints on psi final\n\n")
+                elif self.prev_solve_type == 'sling_len_opt':
+                    psibounds = (float(self.sccw['launch_angle']['psifmin'].get()), 
+                                 float(self.sccw['launch_angle']['psifmax'].get()))
+                    Lsbounds = (float(self.sccw['sling_len_opt']['lsmin'].get()), 
+                                 float(self.sccw['sling_len_opt']['lsmax'].get()))
+                    self.dp.Ls = self.sol['Ls_opt']
+                    extra_msg = ("Psi at release: " + str(round(self.sol['yf'][2], self.rp)) + 
+                                 "\nOptimized sling length: " + str(round(self.sol['Ls_opt'], self.rp)) + "\n")
+                    if True in [np.isclose(psif, psibounds[0]), np.isclose(psif, psibounds[1]), 
+                               np.isclose(self.dp.Ls, Lsbounds[0]), np.isclose(self.dp.Ls, Lsbounds[1])]:
+                        extra_msg = (extra_msg + "\nWarning: The target launch angle and final arm angle were not "
+                                     "reachable given the specified constraints on psi final and sling length\n\n")
+                elif self.prev_solve_type == 'arm_inertia_opt':
+                    psibounds = (float(self.sccw['launch_angle']['psifmin'].get()), 
+                                 float(self.sccw['launch_angle']['psifmax'].get()))
+                    Iabounds = (float(self.sccw['arm_inertia_opt']['aimin'].get()), 
+                                 float(self.sccw['arm_inertia_opt']['aimax'].get()))
+                    self.dp.Ia = self.sol['Ia_opt']
+                    extra_msg = ("Psi at release: " + str(round(self.sol['yf'][2], self.rp)) + 
+                                 "\nOptimized arm inertia: " + str(round(self.sol['Ia_opt'], self.rp)) + "\n")
+                    if True in [np.isclose(psif, psibounds[0]), np.isclose(psif, psibounds[1]), 
+                               np.isclose(self.dp.Ia, Iabounds[0]), np.isclose(self.dp.Ia, Iabounds[1])]:
+                        extra_msg = (extra_msg + "\nWarning: The target launch angle and final arm angle were not " 
+                                     "reachable given the specified constraints on psi final and arm inertia\n\n")
+                else:
+                    extra_msg = "NOT YET IMPLEMENTED"
                 
-            vpf = CDTtools.dyn_core_tools.vp(self.sol['yf'], self.dp) # dp has been updated if necessary
-            # crucially, it only gets changed again when simulate is run
-            self.vpf = np.linalg.norm(vpf)
-            thetaf = self.sol['yf'][0]
-            if theta_min_true < theta_min_guess:
-                extra_msg = (extra_msg + 
-                             "\nWarning: Minimum arm angle outside of interpolation range: \u03B8_min = " + 
-                                str(round(theta_min_true, self.rp)) + "\n")
-            sim_res_msg = (extra_msg + "Launch speed: " + str(round(self.vpf, self.rp)) + 
-                           "\nRelease time: " + str(round(self.sol['tf'], self.rp)) +
-                          "\nTheta at release: " + str(round(thetaf, self.rp)))
+                vpf = CDTtools.dyn_core_tools.vp(self.sol['yf'], self.dp) # dp has been updated if necessary
+                # crucially, it only gets changed again when simulate is run
+                self.vpf = np.linalg.norm(vpf)
+                thetaf = self.sol['yf'][0]
+                if theta_min_true < theta_min_guess:
+                    extra_msg = (extra_msg + 
+                                 "\nWarning: Minimum arm angle outside of interpolation range: \u03B8_min = " + 
+                                    str(round(theta_min_true, self.rp)) + "\n")
+                sim_res_msg = (extra_msg + "Launch speed: " + str(round(self.vpf, self.rp)) + 
+                               "\nRelease time: " + str(round(self.sol['tf'], self.rp)) +
+                              "\nTheta at release: " + str(round(thetaf, self.rp)))
+            else:
+                sim_res_msg = "Solver failed. Check the logfile for detailed error information."
                             
         else:
             # womp womp
