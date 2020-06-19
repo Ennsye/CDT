@@ -1,5 +1,4 @@
 import tkinter as tk
-import _pickle as pickle
 
 from matplotlib.backends.backend_tkagg import (
     FigureCanvasTkAgg, NavigationToolbar2Tk)
