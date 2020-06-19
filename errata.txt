@@ -1,0 +1,2 @@
+Building on GNU/Linux systems may require cmake ../src to be run twice, with the first run emitting a cryptic error message and the second working normally.
+Ensure that all the numpy arrays passed to the "fast" functions have dtype float. Numpy's conversion to C array fails silently otherwise.

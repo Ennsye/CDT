@@ -1,0 +1,18 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/run/media/david/Cirque/Punkin Chunkin/python/CDT/src/dynlib.c
+dynlib.h
+/run/media/david/Cirque/Punkin Chunkin/python/CDT/src/dynlib.h
+math.h
+-
+stdio.h
+-
+
+/run/media/david/Cirque/Punkin Chunkin/python/CDT/src/dynlib.h
+

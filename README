@@ -1,0 +1,51 @@
+Linux
+The required dependencies for CDT are:
+python 3.8.3
+tkinter 8.6 (can't be pip installed)
+networkx 2.4
+numpy 1.18.5
+scipy 1.4.1
+matplotlib 3.2.1
+
+Optional Dependencies:
+sympy 1.6
+
+Older and/or newer versions will probably work. Networkx underwent a significant syntax change in September 2017. Versions from before then likely won't work.
+
+Running the GUI:
+Open the CDT directory in a terminal, and run:
+python GUI.py
+
+That's it! Dependencies can be installed directly on the system, or using a virtualenv (see the excellent explanation and guide at https://docs.python.org/3/tutorial/venv.html). 
+
+
+Windows
+Windows doesn't include Python by default, or, for that matter, a C compiler. This makes doing most computer-related things awkward at best, and leads one to wonder why people are still paying money for it. Unfortunately, we can't all escape Microsoft's grasping tentacles, especially if we rely on certain CAE tools.
+The easiest way to run CDT on Windows is to install Anaconda. This includes all(?)(check this) of the necessary dependencies. After installing Anaconda, open the CDT directory in an Anaconda Prompt and run:
+python GUI.py
+
+
+Binaries: If you're seeing mysterious simulation errors, there's a good chance the precompiled binary that implements the dynamics model isn't working on your hardware, or that you're not on a Linux or Windows sytem. In the former case, the problem can likely be solved by recompiling libdyn. A guide with an example of how to do this is included further down the readme. If you refuse to run precompiled binaries from some random guy on the internet, you probably know enough to not need to need the guide.
+
+Recompiling Binaries:
+Linux:
+Delete the contents of CDT/build
+With CDT/build open in a terminal, run:
+cmake ../src
+make
+
+On some systems, the cmake command may fail mysteriously the first time around, but work on a second try.
+
+
+Windows:
+If you already have a compiler, you'll have your own way to do this. If not:
+Delete all contents of CDT/build
+Download and install mingw64 according to their instructions
+Download and install cmake
+In a command prompt, navigate to CDT/build and run:
+cmake ../src -G "MinGW Makefiles"
+mingw32-make
+
+
+
+

@@ -1,0 +1,4 @@
+gcc -c dynlib.c
+gcc -shared -o libdyn.so libdyn.o
+
+Or just use CMake - it works great on all platforms!
