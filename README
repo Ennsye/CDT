@@ -1,7 +1,9 @@
+CDT is a tool for simulating catapults, written mostly in Python. Specifically, catapults that can be represented as a forced double pendulum. Think medieval counterweight trebuchet, but with bands or springs instead of a counterweight. It can be used as either a Python package or a standalone tkinter GUI. New users will probably want to get familiar with the GUI version first. If you do engineering or scientific computing in Python, chances are you already have what you need to run CDT.
+
 Linux
 The required dependencies for CDT are:
 python 3.8.3
-tkinter 8.6 (can't be pip installed)
+tkinter 8.6 (can't be pip installed due to tcl)
 networkx 2.4
 numpy 1.18.5
 scipy 1.4.1
@@ -10,7 +12,7 @@ matplotlib 3.2.1
 Optional Dependencies:
 sympy 1.6
 
-Older and/or newer versions will probably work. Networkx underwent a significant syntax change in September 2017. Versions from before then likely won't work.
+Older and/or newer versions will probably work. Networkx underwent a significant syntax change in September 2017, so versions from before then likely won't work.
 
 Running the GUI:
 Open the CDT directory in a terminal, and run:
@@ -25,7 +27,7 @@ The easiest way to run CDT on Windows is to install Anaconda. This includes all(
 python GUI.py
 
 
-Binaries: If you're seeing mysterious simulation errors, there's a good chance the precompiled binary that implements the dynamics model isn't working on your hardware, or that you're not on a Linux or Windows sytem. In the former case, the problem can likely be solved by recompiling libdyn. A guide with an example of how to do this is included further down the readme. If you refuse to run precompiled binaries from some random guy on the internet, you probably know enough to not need to need the guide.
+Binaries: The included binaries should work on most modern Windows or GNU/Linux systems. If you're seeing mysterious simulation errors, there's a good chance the precompiled binary that implements the dynamics model isn't working on your hardware, or that you're not on a supported OS. In the former case, the problem can likely be solved by recompiling libdyn. A guide with an example of how to do this is included further down the readme. If you refuse to run precompiled binaries from some random guy on the internet, you probably know enough to not need to read this.
 
 Recompiling Binaries:
 Linux:
