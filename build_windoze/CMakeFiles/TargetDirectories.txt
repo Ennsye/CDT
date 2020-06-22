@@ -1,0 +1,3 @@
+C:/Users/14167/CDT/build_windoze/CMakeFiles/edit_cache.dir
+C:/Users/14167/CDT/build_windoze/CMakeFiles/dyn.dir
+C:/Users/14167/CDT/build_windoze/CMakeFiles/rebuild_cache.dir

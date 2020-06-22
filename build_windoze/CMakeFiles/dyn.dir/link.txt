@@ -1,0 +1,3 @@
+"C:\Program Files\CMake\bin\cmake.exe" -E rm -f CMakeFiles\dyn.dir/objects.a
+C:\PROGRA~1\MINGW-~1\X86_64~1.0-P\mingw64\bin\ar.exe cr CMakeFiles\dyn.dir/objects.a @CMakeFiles\dyn.dir\objects1.rsp
+C:\PROGRA~1\MINGW-~1\X86_64~1.0-P\mingw64\bin\gcc.exe    -shared -o libdyn.dll -Wl,--out-implib,libdyn.dll.a -Wl,--major-image-version,0,--minor-image-version,0 -Wl,--whole-archive CMakeFiles\dyn.dir/objects.a -Wl,--no-whole-archive @CMakeFiles\dyn.dir\linklibs.rsp
