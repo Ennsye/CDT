@@ -11,6 +11,7 @@ from scipy.optimize import minimize
 import sys
 import time
 import traceback
+import warnings
 
 import matplotlib.animation as animation
 
@@ -503,7 +504,9 @@ def puller_potential_energy(tp, theta0, plot=False, plotdomain=None, axPPE=None)
     # plotdomain is a tuple (xmin, xmax)
     p = np.array([tp.c10, tp.c9, tp.c8, tp.c7, tp.c6, tp.c5, tp.c4, tp.c3, tp.c2, tp.c1, tp.c0])
     R = np.roots(p)
+    warnings.filterwarnings('ignore')
     R = (R[np.argwhere((~np.iscomplex(R)) & (R<theta0))][:,0]).astype(float) # indexing fixes stupid argwhere BS
+    warnings.resetwarnings()
     # R is list containing the real roots of the torque function that are < theta0
     
     def tau(theta):
