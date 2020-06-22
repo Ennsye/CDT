@@ -46,7 +46,6 @@ class CDT_GUI:
         
         self.master = master
         master.title("Catapult Design Tool")
-#         master.geometry("1470x900")
         tk.Tk.report_callback_exception = self.show_error # turns off the default "silent failure mode"...
         self.back = tk.Frame(master=self.master)
 #         self.back.pack_propagate(0) #Don't allow the widgets inside to determine the frame's width / height
@@ -57,7 +56,7 @@ class CDT_GUI:
         self.ax1 = self.fig1.add_subplot(111)
         
         self.plotFrame1 = tk.Frame(master=self.back)
-        self.plotFrame1.grid(row=2, column=0, rowspan=2)
+        self.plotFrame1.grid(row=2, column=0, rowspan=2, columnspan=2)
         self.plot1SubFrame = tk.Frame(master=self.plotFrame1)
         self.plot1SubFrame.grid(row=0, column=0, columnspan=2)
         self.canvas1 = FigureCanvasTkAgg(self.fig1, master=self.plot1SubFrame)  # A tk.DrawingArea.
@@ -88,7 +87,7 @@ class CDT_GUI:
         self.ax2 = self.fig2.add_subplot(111)
         
         self.plotFrame2 = tk.Frame(master=self.back)
-        self.plotFrame2.grid(row=2, column=2, rowspan=2)
+        self.plotFrame2.grid(row=2, column=3, rowspan=2)
         self.plot2SubFrame = tk.Frame(master=self.plotFrame2)
         self.plot2SubFrame.grid(row=0, column=0)
         self.canvas2 = FigureCanvasTkAgg(self.fig2, master=self.plot2SubFrame)  # A tk.DrawingArea.
@@ -118,32 +117,32 @@ class CDT_GUI:
         
         # MAIN CONTROLS
         self.mcFrame = tk.Frame(master=self.back)
-        self.mcFrame.grid(row=3, column=1)
-        self.simMsgM = tk.Message(master=self.mcFrame, text="", width=180, bg='white')
-        self.simMsgM.grid(row=0, column=0, columnspan=2)
+        self.mcFrame.grid(row=3, column=2)
+        self.simMsgM = tk.Message(master=self.mcFrame, text="", width=256, bg='white')
+        self.simMsgM.grid(row=0, column=0, rowspan=2)
         self.msg_text = tk.StringVar()
         self.msg_text.trace_add("write", self._update_simMsg)
         self.msg_text.set("") # contents of simMsgM
         
         self.run_button = tk.Button(master=self.mcFrame, text="Start Solver", command=self._simulate)
-        self.run_button.grid(row=1, column=0)
+        self.run_button.grid(row=0, column=1)
         
         self.stop_button = tk.Button(master=self.mcFrame, text="Stop Solver", command=self._stopsolve)
         self.stop_button.grid(row=1, column=1)
         self.stop_button.config(state=tk.DISABLED)
-
-        self.quit_button = tk.Button(master=self.mcFrame, text="Quit", command=self._quit)
-        self.quit_button.grid(row=2, column=0, columnspan=2)
         # MAIN CONTROLS
         
         # SAVE AND LOAD BUTTONS
         self.saveFrame = tk.Frame(master=self.back)
-        self.saveFrame.grid(row=0, column=0, sticky=tk.NW)
+        self.saveFrame.grid(row=0, column=0, columnspan=2, sticky=tk.NW)
         self.saveBtn = tk.Button(master=self.saveFrame, text="Save Design", command=self._save_design)
         self.saveBtn.grid(row=0, column=0)
         
         self.loadBtn = tk.Button(master=self.saveFrame, text="Load Design", command=self._load_design)
         self.loadBtn.grid(row=0, column=1)
+        
+        self.quit_button = tk.Button(master=self.saveFrame, text="Quit", command=self._quit)
+        self.quit_button.grid(row=0, column=2)
         # SAVE AND LOAD BUTTONS
         
         # DYNAMICS PARAMETERS
@@ -177,7 +176,7 @@ class CDT_GUI:
         
         # SIMULATION CONTROLS
         self.scFrame = tk.Frame(master=self.back)
-        self.scFrame.grid(row=2, column=1)
+        self.scFrame.grid(row=1, column=3)
 
         self.scCondFrame = tk.Frame(master=self.scFrame) 
         # frame containing the conditional entries, which depend on simtype
@@ -260,7 +259,7 @@ class CDT_GUI:
         
         # TORQUE CONTROLS
         self.tcFrame = tk.LabelFrame(master=self.back, text="Torque Source")
-        self.tcFrame.grid(row=0, column=2, rowspan=2)
+        self.tcFrame.grid(row=0, column=2, rowspan=3)
         
         tk.Label(master=self.tcFrame, text="Torque Specification Type").grid(row=0, column=0)
         self.tsTypeVar = tk.StringVar() # constructor argument just specifies the Tk instance, and we only have 1
@@ -280,12 +279,12 @@ class CDT_GUI:
         self.tc_kwE.grid(row=2, column=1)
         
         self.torqueMsgM = tk.Message(master=self.tcFrame, text="", width=430)
-        self.torqueMsgM.grid(row=3, column=0, columnspan=2)
+        self.torqueMsgM.grid(row=4, column=0, columnspan=2)
         
-        self.tfig = Figure(figsize=(3, 3), dpi=100, tight_layout=True)
+        self.tfig = Figure(figsize=(4, 3), dpi=100, tight_layout=True)
         self.tax = self.tfig.add_subplot(111)
         self.tplotFrame = tk.Frame(master=self.tcFrame)
-        self.tplotFrame.grid(row=0, column=2, rowspan=4)
+        self.tplotFrame.grid(row=3, column=0, columnspan=2)
         self.tCanvas = FigureCanvasTkAgg(self.tfig, master=self.tplotFrame)
         self.tCanvas.draw()
         self.tCanvas.get_tk_widget().pack()
@@ -304,6 +303,7 @@ class CDT_GUI:
         
         IRlabels = ['\u03B8 min', '\u03B8 max']
         IRstartpos = (4, 0)
+        tpf_maxcol = 4
         
         self.tccw = {k: dict() for k in self.tsTypes}
         self.tccw['A'] = dict()
@@ -336,7 +336,7 @@ class CDT_GUI:
         self.tccw['A']['FLFrame'].grid(row=2, column=2, columnspan=2) 
         # now we need to create all possible variations of FLFrame contents
         FLFA = self.tccw['A']['FLFrame'] # shorthand
-        FLFA.CW = self._parameter_entry_initializer(dict(), FLFA, self.FLDict, (0,0)) # child widgets   
+        FLFA.CW = self._parameter_entry_initializer(dict(), FLFA, self.FLDict, (0,0), maxcol=tpf_maxcol) # child widgets   
         for w in FLFA.winfo_children():
             w.grid_remove() # otherwise all parameters for F(L) are present despite no func being selected
             
@@ -376,7 +376,7 @@ class CDT_GUI:
         self.tccw['C']['FPFrame'] = tk.Frame(master=self.tcCondFrame)
         self.tccw['C']['FPFrame'].grid(row=2, column=0, columnspan=2)
         FTFC = self.tccw['C']['FPFrame']
-        FTFC.CW = self._parameter_entry_initializer(dict(), FTFC, self.FThetaDict, (0,0))
+        FTFC.CW = self._parameter_entry_initializer(dict(), FTFC, self.FThetaDict, (0,0), maxcol=tpf_maxcol)
         for w in FTFC.winfo_children():
             w.grid_remove()
             
@@ -390,11 +390,11 @@ class CDT_GUI:
         self.tccw['C']['rtl'] = tk.Label(master=self.tcCondFrame, text="R(\u03B8)")
         self.tccw['C']['rtl'].grid(row=1, column=2)
         self.tccw['C']['rtTypeMenu'] = tk.OptionMenu(self.tcCondFrame, self.tcRVar, *self.RThetaDict.keys())
-        self.tccw['C']['rtTypeMenu'].grid(row=1, column=2)
+        self.tccw['C']['rtTypeMenu'].grid(row=1, column=3)
         self.tccw['C']['RPFrame'] = tk.Frame(master=self.tcCondFrame)
         self.tccw['C']['RPFrame'].grid(row=2, column=2, columnspan=2)
         RTFC = self.tccw['C']['RPFrame']
-        RTFC.CW = self._parameter_entry_initializer(dict(), RTFC, self.RThetaDict, (0,0))
+        RTFC.CW = self._parameter_entry_initializer(dict(), RTFC, self.RThetaDict, (0,0), maxcol=tpf_maxcol)
         for w in RTFC.winfo_children():
             w.grid_remove()
             
@@ -404,8 +404,9 @@ class CDT_GUI:
         self.tcRVar.trace_add("write", RTchange)
         
         self.tccw['C']['cfBtn'] = tk.Button(master=self.tcCondFrame, text="Calculate Fit", command=self._calcfit)
-        self.tccw['C']['cfBtn'].grid(row=7, column=0, columnspan=4)      
+        self.tccw['C']['cfBtn'].grid(row=5, column=2, columnspan=2)      
         
+        # tau(theta) and r(theta) ********************
         self.tccw['D'] = dict() # tau and R
         self.tccw['D']['tpl'] = tk.Label(master=self.tcCondFrame, text="Torque Parameters")
         self.tccw['D']['tpl'].grid(row=0, column=0, columnspan=2)
@@ -416,7 +417,7 @@ class CDT_GUI:
         self.tccw['D']['TPFrame'] = tk.Frame(master=self.tcCondFrame)
         self.tccw['D']['TPFrame'].grid(row=2, column=0, columnspan=2)
         TTFD = self.tccw['D']['TPFrame']
-        TTFD.CW = self._parameter_entry_initializer(dict(), TTFD, self.TauThetaDict, (0, 0))
+        TTFD.CW = self._parameter_entry_initializer(dict(), TTFD, self.TauThetaDict, (0, 0), maxcol=tpf_maxcol)
         for w in TTFD.winfo_children():
             w.grid_remove()
         def TTchange(*args):
@@ -430,8 +431,7 @@ class CDT_GUI:
         self.tccw['D']['RPFrame'] = self.tccw['C']['RPFrame']
         self.tccw['D']['cfBtn'] = self.tccw['C']['cfBtn']
 
-#         self.ttoolbar = NavigationToolbar2Tk(self.tCanvas, self.tplotFrame)
-#         self.ttoolbar.update()
+
         self.tsTypeVar.set('Configuration A')
         # TORQUE CONTROLS
     
@@ -673,7 +673,6 @@ class CDT_GUI:
                     Y = np.array(self.sol['H']['Y'])
                     CDTtools.dyn_core_tools.projectile_path(Y, self.dp, plot=True, axPP=self.ax1)
                     self.canvas1.draw()
-                    # add msg if save is selected but no solution available
                     
         elif p1T == 'efficiency':
             if self.prevP1Type != 'efficiency':
@@ -763,8 +762,7 @@ class CDT_GUI:
                     Yd = np.array(self.sol['H']['Yd'])
                     t = np.array(self.sol['H']['t'])
                     CDTtools.dyn_core_tools.axle_reaction_force(Y, Yd, self.dp, t, plot=True, ax_arf=self.ax1)
-                    self.canvas1.draw()
-                    # add msg if save is selected but no solution available    
+                    self.canvas1.draw()   
                                
         else:
             msg = self.msg_text.get() + "Unimplemented plot 1 type: " + self.p1TypeVar.get()
@@ -833,7 +831,7 @@ class CDT_GUI:
         # Totally impossible to disable the play button while the animation is running
         # it just can't be done, not with after or by any other means, in Tkinter, while
         # keeping the rest of the GUI alive. Only other option is to implement animation directly in
-        # Tkinter using after. And that sounds like an unpleasant to spend a day. The user
+        # Tkinter using after. And that sounds like an unpleasant way to spend a day. The user
         # is just going to have to deal with being able to make the plot glitch by hitting Play again
         # it's not like it crashes the GUI or anything
         self.fig1.clear()
@@ -932,7 +930,7 @@ class CDT_GUI:
             i = 0
             SL = [s for s in S.parameters][1:] # L, theta, etc. should not be added
             D_inner = dict()
-            D[funcname] = self._gen_entries2(frame, SL, startpos, D_inner, entrywidth=entrywidth)
+            D[funcname] = self._gen_entries2(frame, SL, startpos, D_inner, entrywidth=entrywidth, maxcol=maxcol)
         return D
         
     def _entry_change(self, frame, cwd, funcname):
