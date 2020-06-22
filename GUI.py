@@ -175,7 +175,7 @@ class CDT_GUI:
         # INITIAL CONDITIONS
         
         # SIMULATION CONTROLS
-        self.scFrame = tk.Frame(master=self.back)
+        self.scFrame = tk.LabelFrame(master=self.back, text="Solver Controls")
         self.scFrame.grid(row=1, column=3)
 
         self.scCondFrame = tk.Frame(master=self.scFrame) 
@@ -722,7 +722,7 @@ class CDT_GUI:
                     msg2 = "\nOverall system efficiency: " + str(round(Ekf/ppe, self.rp))
                 else:
                     msg2 = ""
-                if hasattr(self, "ppeMsg"):
+                if self.prevP1Type == 'puller potential energy':
                     self.ppeMsg.configure(text=msg1+msg2)
                 else:
                     self.ppeMsg = tk.Message(master=self.p1_conditional_controls, text=msg1+msg2, 
