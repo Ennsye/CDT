@@ -124,6 +124,10 @@ def ap(y, ydot, dp):
     apy =  (-dp.La*sin(theta)*thetadd - dp.La*cos(theta)*thetad**2 + dp.Ls*(psid - thetad)**2*cos(psi - theta) 
             + dp.Ls*(psidd - thetadd)*sin(psi - theta))
     return np.array([apx, apy])
+    
+def H(Fm, La, Ia):
+    # the arm design hardness number. See user manual for details. Higher is harder.
+    return Fm/(3.72*(La**2)*((Ia/(La**5))**1.606))
 
 def dyn_full_simple(y0, dt, dp, tp, psi_final, verbose=True, history=False, termination_tolerance=1e-12):
     # doesn't find exact release point yet, just a demo
@@ -282,14 +286,14 @@ def dft_opt1a(y0, dt, dp, tp, pfbounds, vpa_target, Lsbounds, theta_target, plat
         psif = x[1]
         D = dyn_general(y0, dt, dptest, tp, psif, verbose=False, platform=platform, history=False)
         yf = D['yf']
-        vp = vp_angle(yf, dp)
+        vpa = vp_angle(yf, dptest)
         thetaf = yf[0]
-        return ((thetaf - theta_target))**2 + ((vp - vpa_target))**2
+        return ((thetaf - theta_target))**2 + ((vpa - vpa_target))**2
         # without normalizing, there is much larger optimization pressure on vp than on thetaf
         # but the results appear to be adequate all the same
     b = (tuple(Lsbounds), tuple(pfbounds))
     x0 = np.array([(Lsbounds[0] + Lsbounds[1])/2, (pfbounds[0] + pfbounds[1])/2]) # middle of the search space
-    sol = minimize(f, x0, method='L-BFGS-B', bounds=b)
+    sol = minimize(f, x0, method='L-BFGS-B', bounds=b) # can't use root finding due to bounds constraints
     psi_sol = sol.x[1]
     Ls_sol = sol.x[0]
     dp_sol = dyn_params(dp.La, Ls_sol, dp.ds, dp.mb, dp.rc, dp.Ia, dp.mp, dp.g)
@@ -310,11 +314,10 @@ def dft_opt2(y0, dt, dp, tp, pfbounds, vpa_target, Iabounds, theta_target, platf
         psif = x[1]
         D = dyn_general(y0, dt, dptest, tp, psif, verbose=False, platform=platform, history=False)
         yf = D['yf']
-        vp = vp_angle(yf, dp)
+        vpa = vp_angle(yf, dptest)
         thetaf = yf[0]
-        return ((thetaf - theta_target))**2 + ((vp - vpa_target))**2
-        # without normalizing, there is much larger optimization pressure on vp than on thetaf
-        # but the results appear to be adequate all the same
+        return ((thetaf - theta_target))**2 + ((vpa - vpa_target))**2
+
     b = (tuple(Iabounds), tuple(pfbounds))
     x0 = np.array([(Iabounds[0] + Iabounds[1])/2, (pfbounds[0] + pfbounds[1])/2]) # middle of the search space
     sol = minimize(f, x0, method='L-BFGS-B', bounds=b)
@@ -328,6 +331,7 @@ def dft_opt2(y0, dt, dp, tp, pfbounds, vpa_target, Iabounds, theta_target, platf
         H = D['H']
     return {'psi_sol': psi_sol, 'yf': D['yf'], 'Ia_opt': Ia_sol, 'tf': D['tf'], 'H': H}
     
+
 def solver_wrapper(solver, solfile, outpipe, *args, **kwargs):
    # sol may be too big to fit in the outpipe. Since Python doesn't tell us what the size limits are, 
    # or even acknowledge their existence, we write to file instead
