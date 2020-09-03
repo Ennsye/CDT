@@ -183,7 +183,7 @@ class CDT_GUI:
         self.scCondFrame.grid(row=4, column=0, columnspan=2)
         
         # --- widget definition for scCondFrame ---
-        self.simtypes = ['psi', 'launch_angle', 'sling_len_opt', 'arm_inertia_opt']
+        self.simtypes = ['psi', 'launch_angle', 'sling_len_opt', 'arm_inertia_opt', 'max_speed']
         self.sccw = {k: dict() for k in self.simtypes}
         self.sccw['psi']['psi_label'] = tk.Label(master=self.scCondFrame, text="psi at release")
         self.sccw['psi']['psi_label'].grid(row=0, column=0)
@@ -233,6 +233,30 @@ class CDT_GUI:
         self.sccw['arm_inertia_opt']['vpa'] = self.sccw['launch_angle']['vpa']
         self.sccw['arm_inertia_opt']['tf_label'] = self.sccw['sling_len_opt']['tf_label']
         self.sccw['arm_inertia_opt']['thetaf'] = self.sccw['sling_len_opt']['thetaf']
+        
+        self.sccw['max_speed']['pb_label'] = self.sccw['launch_angle']['pb_label']
+        self.sccw['max_speed']['psifmin'] = self.sccw['launch_angle']['psifmin']
+        self.sccw['max_speed']['psifmax'] = self.sccw['launch_angle']['psifmax']
+        self.sccw['max_speed']['slb_label'] = self.sccw['sling_len_opt']['slb_label']
+        self.sccw['max_speed']['lsmin'] = self.sccw['sling_len_opt']['lsmin']
+        self.sccw['max_speed']['lsmax'] = self.sccw['sling_len_opt']['lsmax']
+        self.sccw['max_speed']['aib_label'] = tk.Label(master=self.scCondFrame, 
+                                                           text="arm inertia bounds", wraplength=80)
+        self.sccw['max_speed']['aib_label'].grid(row=2, column=0)
+        self.sccw['max_speed']['aimin'] = tk.Entry(master=self.scCondFrame, width=8)
+        self.sccw['max_speed']['aimin'].grid(row=2, column=1)
+        self.sccw['max_speed']['aimax'] = tk.Entry(master=self.scCondFrame, width=8)
+        self.sccw['max_speed']['aimax'].grid(row=2, column=2)
+        
+        self.sccw['max_speed']['la_label'] = tk.Label(master=self.scCondFrame, text="launch angle")
+        self.sccw['max_speed']['la_label'].grid(row=4, column=0)
+        self.sccw['max_speed']['vpa'] = tk.Entry(master=self.scCondFrame, width=8)
+        self.sccw['max_speed']['vpa'].grid(row=4, column=1)
+        self.sccw['max_speed']['tf_label'] = tk.Label(master=self.scCondFrame, text="\u03B8 final")
+        self.sccw['max_speed']['tf_label'].grid(row=5, column=0)
+        self.sccw['max_speed']['thetaf'] = tk.Entry(master=self.scCondFrame, width=8)
+        self.sccw['max_speed']['thetaf'].grid(row=5, column=1)
+        
         # -------------------------------
 
         tk.Label(master=self.scFrame, text="Time Step").grid(row=0, column=0)
@@ -1102,6 +1126,17 @@ class CDT_GUI:
                            self.dp, self.tp, psibounds, vpa_target, Iabounds, theta_target)
             solver_kwargs = {'verbose': False, 'platform': self.p, 'history': True}
             
+        elif self.simTypeVar.get() == 'max_speed':
+            self.prev_solve_type = 'max_speed'
+            E = self.sccw['max_speed']
+            bounds = np.array([[float(E['psifmin'].get()), float(E['psifmax'].get())],
+                               [float(E['lsmin'].get()), float(E['lsmax'].get())],
+                               [float(E['aimin'].get()), float(E['aimax'].get())]])
+            targets = np.array([float(E['vpa'].get()), float(E['thetaf'].get())])
+            solver_args = (CDTtools.dyn_core_tools.dft_opt_vmax, self.solname, self.cps, self.y0, self.dt,
+                            self.dp, self.tp, bounds, targets)
+            solver_kwargs = {'verbose': False, 'platform': self.p, 'history': True}
+            
         self.solve_proc = multiprocessing.Process(target=CDTtools.dyn_core_tools.solver_wrapper,
                                                  args=solver_args, kwargs=solver_kwargs)
         self.solve_proc.start()
@@ -1165,6 +1200,13 @@ class CDT_GUI:
                                np.isclose(self.dp.Ia, Iabounds[0]), np.isclose(self.dp.Ia, Iabounds[1])]:
                         extra_msg = (extra_msg + "\nWarning: The target launch angle and final arm angle were not " 
                                      "reachable given the specified constraints on psi final and arm inertia\n\n")
+                elif self.prev_solve_type == 'max_speed':
+                    self.dp.Ia = self.sol['xopt'][2]
+                    self.dp.Ls = self.sol['xopt'][1]
+                    extra_msg = ("Psi at release: " + str(round(self.sol['yf'][2], self.rp)) +
+                                 "\nOptimized sling length: " + str(round(self.sol['xopt'][1], self.rp)) +
+                                 "\nOptimized arm inertia: " + str(round(self.sol['xopt'][2], self.rp)) + 
+                                 "\nArm design hardness: " + str(round(adh, self.rp)) + "\n")
                 else:
                     extra_msg = "Solver type " + self.prev_solve_type + " NOT YET IMPLEMENTED"
                 

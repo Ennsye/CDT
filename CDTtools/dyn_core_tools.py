@@ -332,6 +332,59 @@ def dft_opt2(y0, dt, dp, tp, pfbounds, vpa_target, Iabounds, theta_target, platf
         H = D['H']
     return {'psi_sol': psi_sol, 'yf': D['yf'], 'Ia_opt': Ia_sol, 'tf': D['tf'], 'H': H, 'dp': dp_sol}
     
+def dft_opt_vmax(y0, dt, dp, tp, bounds, targets, platform=True, history=False, verbose=False):
+    # vary (psif, Ls, Ia) within bounds to meet targets for (vpa, thetaf) and maximize throw speed vT
+    # could use a constrained minimizer instead of the nested approach, but computing the constraint
+    # fcn requires solving the dynamics, which is expensive, and may not play well. May try it later
+    # bounds is an array ((psifmin, psifmax), (Lsmin, Lsmax), (Iamin, Iamax))
+    # x is a vector [psi Ls Ia]
+    
+    def g(x, Ia):
+        # x = (psif, Ls)
+        dptest = dyn_params(dp.La, x[1], dp.ds, dp.mb, dp.rc, Ia, dp.mp, dp.g)
+        psif = x[0]
+        D = dyn_general(y0, dt, dptest, tp, psif, verbose=False, platform=platform, history=False)
+        yf = D['yf']
+        vpangle = vp_angle(yf, dptest)
+        thetaf = yf[0]
+        y = np.array([vpangle, thetaf])
+        return np.linalg.norm(y - targets)
+        
+    def vT(Ia):
+        b = (tuple(bounds[0,:]), tuple(bounds[1,:]))
+        x0 = np.array([np.mean(b[0]), np.mean(b[1])])
+        sol = minimize(g, x0, method='L-BFGS-B', bounds=b, args=(Ia,))
+        dp_sol = dyn_params(dp.La, sol.x[1], dp.ds, dp.mb, dp.rc, Ia, dp.mp, dp.g)
+        psif_sol = sol.x[0]
+        D_sol = dyn_general(y0, dt, dp_sol, tp, psif_sol, verbose=False, platform=platform, history=True)
+        Y_sol = D_sol['H']['Y']
+        Yd_sol = D_sol['H']['Yd']
+        Fm_sol = np.max(sling_tension(np.array(D_sol['H']['Y']), np.array(D_sol['H']['Yd']),
+                                      np.array(D_sol['H']['t']), dp_sol))
+        vpmag = np.linalg.norm(vp(D_sol['yf'], dp_sol))
+        with open('logfile', 'a') as f:
+            f.write('\n')
+            f.write('completed one iteration of vT(Ia)')
+        return {'val': -vpmag, 'x': sol.x} # as we want to maximize velocity
+        
+    # and now the top level optimizer
+    b = (tuple(bounds[2,:]),)
+    Ia0 = np.mean(b[0])
+    class X: pass # a place to store the x values found in vT
+    xi = X()
+    xi.x = 0
+    def vs(Ia):
+        res = vT(Ia)
+        xi.x = res['x'] # stores x for later use as a side-effect
+        return res['val']
+    sol = minimize(vs, Ia0, method='L-BFGS-B', bounds=b)
+    xsol = np.array([*xi.x, *sol.x]) # parts of x from both layers of optimization
+    dp_sol = dyn_params(dp.La, xsol[1], dp.ds, dp.mb, dp.rc, xsol[2], dp.mp, dp.g)
+    D_sol = dyn_general(y0, dt, dp_sol, tp, xsol[0], platform=platform, history=history, verbose=verbose)
+    H = None
+    if history:
+        H = D_sol['H']
+    return {'yf': D_sol['yf'], 'xopt': xsol, 'tf': D_sol['tf'], 'H': H, 'dp': dp_sol}
 
 def solver_wrapper(solver, solfile, outpipe, *args, **kwargs):
    # sol may be too big to fit in the outpipe. Since Python doesn't tell us what the size limits are, 
