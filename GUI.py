@@ -1120,15 +1120,22 @@ class CDT_GUI:
                     self.sol = pickle.load(f) # can't use the pipe directly d.t. potential large size of soln
                 # self.sol = self.cpr.recv() # this will be needed elsewhere for postproc
                 psif = self.sol['yf'][2]
+                Ysol = np.array(self.sol['H']['Y'])
+                Ydsol = np.array(self.sol['H']['Yd'])
+                dpsol = self.sol['dp']
+                tsol = np.array(self.sol['H']['t'])
+                adh = CDTtools.dyn_core_tools.arm_design_hardness(Ysol, Ydsol, tsol, dpsol)
                 theta_min_true = min(np.array(self.sol['H']['Y'])[:,0])
                 theta_min_guess = min(self.theta_range)
                 if self.prev_solve_type == 'psi':
                     extra_msg = ("Launch angle: " + 
-                             str(round(CDTtools.dyn_core_tools.vp_angle(self.sol['yf'], self.dp), self.rp)) + "\n")
+                             str(round(CDTtools.dyn_core_tools.vp_angle(self.sol['yf'], self.dp), self.rp)) + 
+                             "\nArm design hardness: " + str(round(adh, self.rp)) + "\n")
                 elif self.prev_solve_type == 'launch_angle':
                     psibounds = (float(self.sccw['launch_angle']['psifmin'].get()), 
                                  float(self.sccw['launch_angle']['psifmax'].get()))
-                    extra_msg = "Psi at release: " + str(round(psif, self.rp)) + "\n"
+                    extra_msg = ("Psi at release: " + str(round(psif, self.rp)) + 
+                                "\nArm design hardness: " + str(round(adh, self.rp)) + "\n")
                     if np.isclose(psif, psibounds[0], atol=1e-3) or np.isclose(psif, psibounds[1], atol=1e-3):
                         extra_msg = (extra_msg + "\nWarning: The target launch angle was not reachable given the"
                                      " specified constraints on psi final\n\n")
@@ -1139,7 +1146,8 @@ class CDT_GUI:
                                  float(self.sccw['sling_len_opt']['lsmax'].get()))
                     self.dp.Ls = self.sol['Ls_opt']
                     extra_msg = ("Psi at release: " + str(round(self.sol['yf'][2], self.rp)) + 
-                                 "\nOptimized sling length: " + str(round(self.sol['Ls_opt'], self.rp)) + "\n")
+                                 "\nOptimized sling length: " + str(round(self.sol['Ls_opt'], self.rp)) + 
+                                 "\nArm design hardness: " + str(round(adh, self.rp)) + "\n")
                     if True in [np.isclose(psif, psibounds[0]), np.isclose(psif, psibounds[1]), 
                                np.isclose(self.dp.Ls, Lsbounds[0]), np.isclose(self.dp.Ls, Lsbounds[1])]:
                         extra_msg = (extra_msg + "\nWarning: The target launch angle and final arm angle were not "
@@ -1151,13 +1159,14 @@ class CDT_GUI:
                                  float(self.sccw['arm_inertia_opt']['aimax'].get()))
                     self.dp.Ia = self.sol['Ia_opt']
                     extra_msg = ("Psi at release: " + str(round(self.sol['yf'][2], self.rp)) + 
-                                 "\nOptimized arm inertia: " + str(round(self.sol['Ia_opt'], self.rp)) + "\n")
+                                 "\nOptimized arm inertia: " + str(round(self.sol['Ia_opt'], self.rp)) + 
+                                 "\nArm design hardness: " + str(round(adh, self.rp)) + "\n")
                     if True in [np.isclose(psif, psibounds[0]), np.isclose(psif, psibounds[1]), 
                                np.isclose(self.dp.Ia, Iabounds[0]), np.isclose(self.dp.Ia, Iabounds[1])]:
                         extra_msg = (extra_msg + "\nWarning: The target launch angle and final arm angle were not " 
                                      "reachable given the specified constraints on psi final and arm inertia\n\n")
                 else:
-                    extra_msg = "NOT YET IMPLEMENTED"
+                    extra_msg = "Solver type " + self.prev_solve_type + " NOT YET IMPLEMENTED"
                 
                 vpf = CDTtools.dyn_core_tools.vp(self.sol['yf'], self.dp) # dp has been updated if necessary
                 # crucially, it only gets changed again when simulate is run

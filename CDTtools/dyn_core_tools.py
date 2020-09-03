@@ -125,9 +125,10 @@ def ap(y, ydot, dp):
             + dp.Ls*(psidd - thetadd)*sin(psi - theta))
     return np.array([apx, apy])
     
-def H(Fm, La, Ia):
+def arm_design_hardness(Y, Yd, t, dp):
     # the arm design hardness number. See user manual for details. Higher is harder.
-    return Fm/(3.72*(La**2)*((Ia/(La**5))**1.606))
+    Fm = np.max(sling_tension(Y, Yd, t, dp))
+    return Fm/(3.72*(dp.La**2)*((dp.Ia/(dp.La**5))**1.606))
 
 def dyn_full_simple(y0, dt, dp, tp, psi_final, verbose=True, history=False, termination_tolerance=1e-12):
     # doesn't find exact release point yet, just a demo
@@ -184,7 +185,7 @@ def dyn_full_simple(y0, dt, dp, tp, psi_final, verbose=True, history=False, term
         print("vp angle = ", (vp_angle(y_final, dp)))
         print("final projectile acceleration = ", np.linalg.norm(apf))
     if history:
-        return {'yf': y_final, 'tf': t_final, 'H': H}
+        return {'yf': y_final, 'tf': t_final, 'H': H, 'dp': dp}
     else:     
         return {'yf': y_final, 'tf': t_final}
 
@@ -247,7 +248,7 @@ def dyn_full_platform(y0, dt, dp, tp, psi_final, verbose=True, history=False, tr
         H['Y'] = H['Y'] + sol['H']['Y']
         H['Yd'] = H['Yd'] + sol['H']['Yd']
         H['t'] = H['t'] + [e + T1 for e in sol['H']['t']]
-        return {'yf': sol['yf'], 'tf': sol['tf'] + T1, 'H': copy.deepcopy(H)} # H is a dictionary of lists
+        return {'yf': sol['yf'], 'tf': sol['tf'] + T1, 'H': copy.deepcopy(H), 'dp': dp} # H is a dictionary of lists
     else:
         return {'yf': sol['yf'], 'tf': sol['tf'] + T1}
 
@@ -272,7 +273,7 @@ def dft_vpastop(y0, dt, dp, tp, pfbounds, vpa_target, verbose=False, platform=Tr
     H = None
     if history:
         H = D['H']
-    return {'psi': sol.x, 'yf': D['yf'], 'tf': D['tf'], 'H': H}
+    return {'psi': sol.x, 'yf': D['yf'], 'tf': D['tf'], 'H': H, 'dp': dp}
 
 # next, we need to be able to vary sling length to get the throw to happen at a  given value of theta
 # we could also, equivalently, do this by varying arm inertia
@@ -302,7 +303,7 @@ def dft_opt1a(y0, dt, dp, tp, pfbounds, vpa_target, Lsbounds, theta_target, plat
     H = None
     if history:
         H = D['H']
-    return {'psi_sol': psi_sol, 'yf': D['yf'], 'Ls_opt': Ls_sol, 'tf': D['tf'], 'H': H}
+    return {'psi_sol': psi_sol, 'yf': D['yf'], 'Ls_opt': Ls_sol, 'tf': D['tf'], 'H': H, 'dp': dp_sol}
     
 def dft_opt2(y0, dt, dp, tp, pfbounds, vpa_target, Iabounds, theta_target, platform=True, history=False, verbose=False):
     # vary release angle and arm inertia while all else held fixed to achieve a target launch angle and final arm angle
@@ -329,7 +330,7 @@ def dft_opt2(y0, dt, dp, tp, pfbounds, vpa_target, Iabounds, theta_target, platf
     H = None
     if history:
         H = D['H']
-    return {'psi_sol': psi_sol, 'yf': D['yf'], 'Ia_opt': Ia_sol, 'tf': D['tf'], 'H': H}
+    return {'psi_sol': psi_sol, 'yf': D['yf'], 'Ia_opt': Ia_sol, 'tf': D['tf'], 'H': H, 'dp': dp_sol}
     
 
 def solver_wrapper(solver, solfile, outpipe, *args, **kwargs):
