@@ -127,7 +127,9 @@ def ap(y, ydot, dp):
     
 def arm_design_hardness(Y, Yd, t, dp):
     # the arm design hardness number. See user manual for details. Higher is harder.
-    Fm = np.max(sling_tension(Y, Yd, t, dp))
+    Ftip = load_info(Y, Yd, t, dp) # tip_force is in base frame, we want arm frame
+    Fytip = Ftip['Fy_tip']
+    Fm = np.max(np.absolute(Fytip))
     return Fm/(3.72*(dp.La**2)*((dp.Ia/(dp.La**5))**1.606))
 
 def dyn_full_simple(y0, dt, dp, tp, psi_final, verbose=True, history=False, termination_tolerance=1e-12):
