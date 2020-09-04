@@ -5,6 +5,7 @@
 \usepackage{listings}
 \usepackage{natbib}
 \usepackage{tikz}
+\usepackage{gensymb}
 \usetikzlibrary{arrows,decorations.markings,decorations.pathmorphing,patterns}
 \newcommand\centerofmass{%
     \tikz[radius=0.4em] {%
@@ -15,11 +16,13 @@
 
 \title{CDT Documentation}
 \author{David Eade}
-\date{May 2020}
+\date{September 4, 2020}
 
 \begin{document}
 
 \maketitle
+
+\tableofcontents
 
 \section{Introduction}
 For the past several years, I've been designing catapults using a mish-mash of stress analysis tools, rigid body dynamics tools, and my own half-baked code to fill in the gaps. The dearth of purpose-built catapult design tools makes the hobby difficult to access for most people without a solid mechanical engineering background or a lot of time and money to spend on failed prototypes. Although the CDT does not fully solve the accessibility problem yet, mainly owing to the absence of an arm stress analysis tool, I hope it will open up the hobby to a wider audience. The design and construction of catapults is a rich and rewarding pastime, with many low hanging fruit still waiting to be picked, and I look forward to having more people to share it with.\par
@@ -73,7 +76,7 @@ The CDT models a catapult as a forced double pendulum with rigid links and no ai
 \subsection{State Variables}
 The configuration of the system is fully specified by two generalized coordinates, $\theta$ and $\psi$, corresponding to the angle of the arm relative to the base and the angle of the sling relative to the arm. The state of the system is thus $\mathbf{y} = (\theta, \dot{\theta}, \psi, \dot{\psi})^\top$. By writing the kinetic and potential energy of the system in terms of the generalized coordinates we can find the Lagrangian, after which applying the Euler-Lagrange equation yields the differential equations describing the motion. These are rather bulky, and have been omitted for brevity. The interested reader can find them in dynlib.c.
 
-\subsection{Simulation}
+\subsection{Simulation} \label{Simulation}
 Two main cases are handled by the dynamics solver: the standard catapult depicted above, and one where a mechanical stop ("platform") prevents $\psi$ from decreasing below its initial value. In the second case, the entire assembly initially rotates together, with no change in $\psi$, until the force due to angular rotation trying to lift the projectile off the platform exceeds the force due to angular acceleration trying to hold it down. This entails transitioning between dynamics models mid-throw.\par
 
 The solver uses the RK4 method to integrate the ODEs describing the system's dynamics. As such, it is necessary for the user to specify a time step. Standard considerations for numerical convergence apply, although in the range of interest for practical trebuchet design the equations are numerically well-behaved. Something on the order of 1000 time steps is typically sufficient for good convergence. When transitions between models are present or a stop condition is reached, a bisection search is used to precisely determine the transition time. This means that solutions using the platform option will typically have a single short time step somewhere in the middle. \par
@@ -187,6 +190,19 @@ Regardless of the method used for specifying forces, torques, or geometries, $\t
 \subsubsection{Hysteresis}
 The reason for this parameter was discussed in \ref{Torque Source}. Calculate fit will work normally if it is omitted, but the simulation will fail. If unsure about the value and using any material other than rubber, set it to 1. For rubber, use 2. Remember that any direction dependent effects on the torque can \emph{only} be modeled using this parameter. 
 
+\subsection{Simulation Types}
+As discussed in section \ref{Simulation} there are only two core dynamics solvers. There are, however, many common use cases in the design process which are more complex than specifying the design parameters and getting a result. Typically, the user has some sort of goal for performance and constraints on what they can build. As such, various optimizing solvers are available to speed the search through the design space.
+\subsubsection{Psi}
+Use the dynamics solver directly by specifying the value of $\psi$ (the angle between the arm and the sling) at which the projectile is released. The dynamics solver finds the time where $\psi = \psi_{target}$ and returns the state vector at that time.
+\subsubsection{Launch Angle}
+Stop the simulation when the projectile velocity vector reaches a specified angle AND the projectile is no longer resting on the platform AND $\psi_{min} < \psi < \psi_{max}$. The angle convention is intuitive - 0 corresponds to throwing straight forward, $\pi/4$ corresponds to throwing forward at a 45\degree angle. Watch the animation to detect potentially wonky behaviour in machines that complete multiple rotations before throwing.
+\subsubsection{Sling Length Optimizer}
+Same as Launch Angle, except sling length is varied within specified limits such that the arm reaches a specified target angle at the time the projectile is released. Note that the convention for arm angle here is the same as the one shown in section \ref{Dynamics Assembly Parameters}. Should run in less than ten seconds on most machines.
+\subsubsection{Arm Inertia Optimizer}
+Same as Sling Length Optimizer, but varies arm inertia instead.
+\subsubsection{Max Speed}
+Given targets for final arm angle and launch angle, and limits on arm inertia, sling length, and release angle, finds the configuration that produces the maximum throw speed. If the limits are set appropriately, this should occur when the arm stalls at the same time the projectile releases. May take a minute or more to run on slower machines, so be sure to set the solver timeout appropriately.
+
 \subsection{Postprocessing}
 The two plot windows at the bottom of the interface can display most relevant information about the performance of the machine after the simulation is complete. The one on the right handles the "normal" plotting functions, where x and y axis data can be set independently. The one on the left handles more specialized features, like animation and loading states of the arm.
 \subsubsection{Puller Speed} Available on the right-side plot. It is important to note that the speed is \emph{negative} if the puller is \emph{contracting}. Puller speed cannot be calculated correctly if $R(\theta)$ is not physically accurate.
@@ -197,6 +213,12 @@ Refer to the arm tip coordinate frame in \ref{Dynamics Assembly Parameters} for 
 \subsubsection{Efficiency} There are several ways to talk about the energy efficiency of a catapult, but the most useful for design purposes in many cases is to compare the energies of the arm and the sling+projectile system. The energy considered here is the sum of gravitational potential and kinetic, relative to the base frame.
 \subsubsection{Puller Potential Energy} This tool allows finding the overall energy efficiency of the system, from puller to projectile, and is somewhat more difficult to use. It finds the zeroes of the torque function in the the domain $\theta < \theta_0$, prunes the zeroes that are not candidates for minima of the integral, then selects the zero corresponding to the largest potential energy drop relative to the initial condition. The difficulty is that, since the torque it uses is the polynomial fit to the actual torque, and even the actual torque may be a convenient approximation, the values it returns may be unexpected and useless, as they correspond to artifacts of the fit or approximation rather than physical reality. This can usually be fixed either by changing interpolation range in the torque specification, or using the "Direct" option for specifying $\tau(\theta)$. Note that the plot cannot be updated until the simulation is run again. The red dots mark zeroes of the torque function, and the black dot marks the initial condition.
 \subsubsection{Axle Reaction Force} In some higher performance catapults, the entire machine may be thrown by the unbalanced force on the axle as the arm rotates. This plotting tool is useful for design of hold-downs to prevent unwanted motion of the machine during a throw. The forces given are the loads on the axle in the base frame. For example, a y-direction force of +100 would tend to pull the whole machine up.
+
+\section{Arm Design Hardness}
+ At the higher performance levels, by far the most difficult problem is constructing the arm to be sufficiently strong without an excessively high rotational inertia. The arm design hardness (denoted here as $\mathcal{H}$) is a powerful tool when choosing between catapult designs, as it provides a single number to compare design difficulties. Solving a more difficult design problem entails either better materials or more complex geometry. All solver options return the calculated $\mathcal{H}$ value in the output. Due to the various approximations involved in calculating $\mathcal{H}$, one should not read too much into the exact values, or choose between designs based on a small difference in values. It is, however, a good measure of the general feasibility of constructing a design. 500 is easy, 2000 requires only basic competency. I've successfully designed an arm with $\mathcal{H}=35000$, though at this point one is well into the realm of exotic materials and intricate geometry. The process of determining $\mathcal{H}$ also entailed quantifying the material property corresponding to suitability for arm design. This value, denoted $\mathcal{A}$, is approximately determined by
+ \[\mathcal{A} = E^{0.279} \sigma_y^{0.721} \rho^{-1.606}\]
+ The strong dependence on $\rho$ has some interesting effects - for example, most common woods are superior to 6Al4V titanium alloy! However, one must remember that this only holds for a given geometry - as titanium is isotropic, and can be formed by casting or 3d printing, the disadvantage in material suitability can be countered by employing more highly optimized shapes.
+
 \section{Units}
 No units of measure (seconds, pounds, hogsheads of mercury per cubic furlong, etc) are used anywhere in the CDT. The user is free to use whatever system they please, so long as it is consistent. If you don't know what a consistent unit system is, defaulting to MKS is probably easiest.
 \section{Troubleshooting}
