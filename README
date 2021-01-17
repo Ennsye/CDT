@@ -1,4 +1,6 @@
 CDT is a tool for simulating catapults, written mostly in Python. Specifically, catapults that can be represented as a forced double pendulum. Think medieval counterweight trebuchet, but with bands or springs instead of a counterweight. It can be used as either a Python package or a standalone tkinter GUI. New users will probably want to get familiar with the GUI version first. If you do engineering or scientific computing in Python, chances are you already have what you need to run CDT.
+The tex source for the user manual is included. The manual itself can either be compiled by the user, or viewed on Overleaf here:
+https://www.overleaf.com/read/ftdshxybqrvt
 
 Linux
 The required dependencies for CDT are:

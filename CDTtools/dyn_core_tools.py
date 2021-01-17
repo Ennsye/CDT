@@ -11,6 +11,7 @@ from scipy.optimize import minimize
 import sys
 import time
 import traceback
+import warnings
 
 import matplotlib.animation as animation
 
@@ -123,6 +124,13 @@ def ap(y, ydot, dp):
     apy =  (-dp.La*sin(theta)*thetadd - dp.La*cos(theta)*thetad**2 + dp.Ls*(psid - thetad)**2*cos(psi - theta) 
             + dp.Ls*(psidd - thetadd)*sin(psi - theta))
     return np.array([apx, apy])
+    
+def arm_design_hardness(Y, Yd, t, dp):
+    # the arm design hardness number. See user manual for details. Higher is harder.
+    Ftip = load_info(Y, Yd, t, dp) # tip_force is in base frame, we want arm frame
+    Fytip = Ftip['Fy_tip']
+    Fm = np.max(np.absolute(Fytip))
+    return Fm/(3.72*(dp.La**2)*((dp.Ia/(dp.La**5))**1.606))
 
 def dyn_full_simple(y0, dt, dp, tp, psi_final, verbose=True, history=False, termination_tolerance=1e-12):
     # doesn't find exact release point yet, just a demo
@@ -179,7 +187,7 @@ def dyn_full_simple(y0, dt, dp, tp, psi_final, verbose=True, history=False, term
         print("vp angle = ", (vp_angle(y_final, dp)))
         print("final projectile acceleration = ", np.linalg.norm(apf))
     if history:
-        return {'yf': y_final, 'tf': t_final, 'H': H}
+        return {'yf': y_final, 'tf': t_final, 'H': H, 'dp': dp}
     else:     
         return {'yf': y_final, 'tf': t_final}
 
@@ -242,7 +250,7 @@ def dyn_full_platform(y0, dt, dp, tp, psi_final, verbose=True, history=False, tr
         H['Y'] = H['Y'] + sol['H']['Y']
         H['Yd'] = H['Yd'] + sol['H']['Yd']
         H['t'] = H['t'] + [e + T1 for e in sol['H']['t']]
-        return {'yf': sol['yf'], 'tf': sol['tf'] + T1, 'H': copy.deepcopy(H)} # H is a dictionary of lists
+        return {'yf': sol['yf'], 'tf': sol['tf'] + T1, 'H': copy.deepcopy(H), 'dp': dp} # H is a dictionary of lists
     else:
         return {'yf': sol['yf'], 'tf': sol['tf'] + T1}
 
@@ -267,7 +275,7 @@ def dft_vpastop(y0, dt, dp, tp, pfbounds, vpa_target, verbose=False, platform=Tr
     H = None
     if history:
         H = D['H']
-    return {'psi': sol.x, 'yf': D['yf'], 'tf': D['tf'], 'H': H}
+    return {'psi': sol.x, 'yf': D['yf'], 'tf': D['tf'], 'H': H, 'dp': dp}
 
 # next, we need to be able to vary sling length to get the throw to happen at a  given value of theta
 # we could also, equivalently, do this by varying arm inertia
@@ -281,14 +289,14 @@ def dft_opt1a(y0, dt, dp, tp, pfbounds, vpa_target, Lsbounds, theta_target, plat
         psif = x[1]
         D = dyn_general(y0, dt, dptest, tp, psif, verbose=False, platform=platform, history=False)
         yf = D['yf']
-        vp = vp_angle(yf, dp)
+        vpa = vp_angle(yf, dptest)
         thetaf = yf[0]
-        return ((thetaf - theta_target))**2 + ((vp - vpa_target))**2
+        return ((thetaf - theta_target))**2 + ((vpa - vpa_target))**2
         # without normalizing, there is much larger optimization pressure on vp than on thetaf
         # but the results appear to be adequate all the same
     b = (tuple(Lsbounds), tuple(pfbounds))
     x0 = np.array([(Lsbounds[0] + Lsbounds[1])/2, (pfbounds[0] + pfbounds[1])/2]) # middle of the search space
-    sol = minimize(f, x0, method='L-BFGS-B', bounds=b)
+    sol = minimize(f, x0, method='L-BFGS-B', bounds=b) # can't use root finding due to bounds constraints
     psi_sol = sol.x[1]
     Ls_sol = sol.x[0]
     dp_sol = dyn_params(dp.La, Ls_sol, dp.ds, dp.mb, dp.rc, dp.Ia, dp.mp, dp.g)
@@ -297,7 +305,7 @@ def dft_opt1a(y0, dt, dp, tp, pfbounds, vpa_target, Lsbounds, theta_target, plat
     H = None
     if history:
         H = D['H']
-    return {'psi_sol': psi_sol, 'yf': D['yf'], 'Ls_opt': Ls_sol, 'tf': D['tf'], 'H': H}
+    return {'psi_sol': psi_sol, 'yf': D['yf'], 'Ls_opt': Ls_sol, 'tf': D['tf'], 'H': H, 'dp': dp_sol}
     
 def dft_opt2(y0, dt, dp, tp, pfbounds, vpa_target, Iabounds, theta_target, platform=True, history=False, verbose=False):
     # vary release angle and arm inertia while all else held fixed to achieve a target launch angle and final arm angle
@@ -309,11 +317,10 @@ def dft_opt2(y0, dt, dp, tp, pfbounds, vpa_target, Iabounds, theta_target, platf
         psif = x[1]
         D = dyn_general(y0, dt, dptest, tp, psif, verbose=False, platform=platform, history=False)
         yf = D['yf']
-        vp = vp_angle(yf, dp)
+        vpa = vp_angle(yf, dptest)
         thetaf = yf[0]
-        return ((thetaf - theta_target))**2 + ((vp - vpa_target))**2
-        # without normalizing, there is much larger optimization pressure on vp than on thetaf
-        # but the results appear to be adequate all the same
+        return ((thetaf - theta_target))**2 + ((vpa - vpa_target))**2
+
     b = (tuple(Iabounds), tuple(pfbounds))
     x0 = np.array([(Iabounds[0] + Iabounds[1])/2, (pfbounds[0] + pfbounds[1])/2]) # middle of the search space
     sol = minimize(f, x0, method='L-BFGS-B', bounds=b)
@@ -325,8 +332,62 @@ def dft_opt2(y0, dt, dp, tp, pfbounds, vpa_target, Iabounds, theta_target, platf
     H = None
     if history:
         H = D['H']
-    return {'psi_sol': psi_sol, 'yf': D['yf'], 'Ia_opt': Ia_sol, 'tf': D['tf'], 'H': H}
+    return {'psi_sol': psi_sol, 'yf': D['yf'], 'Ia_opt': Ia_sol, 'tf': D['tf'], 'H': H, 'dp': dp_sol}
     
+def dft_opt_vmax(y0, dt, dp, tp, bounds, targets, platform=True, history=False, verbose=False):
+    # vary (psif, Ls, Ia) within bounds to meet targets for (vpa, thetaf) and maximize throw speed vT
+    # could use a constrained minimizer instead of the nested approach, but computing the constraint
+    # fcn requires solving the dynamics, which is expensive, and may not play well. May try it later
+    # bounds is an array ((psifmin, psifmax), (Lsmin, Lsmax), (Iamin, Iamax))
+    # x is a vector [psi Ls Ia]
+    
+    def g(x, Ia):
+        # x = (psif, Ls)
+        dptest = dyn_params(dp.La, x[1], dp.ds, dp.mb, dp.rc, Ia, dp.mp, dp.g)
+        psif = x[0]
+        D = dyn_general(y0, dt, dptest, tp, psif, verbose=False, platform=platform, history=False)
+        yf = D['yf']
+        vpangle = vp_angle(yf, dptest)
+        thetaf = yf[0]
+        y = np.array([vpangle, thetaf])
+        return np.linalg.norm(y - targets)
+        
+    def vT(Ia):
+        b = (tuple(bounds[0,:]), tuple(bounds[1,:]))
+        x0 = np.array([np.mean(b[0]), np.mean(b[1])])
+        sol = minimize(g, x0, method='L-BFGS-B', bounds=b, args=(Ia,))
+        dp_sol = dyn_params(dp.La, sol.x[1], dp.ds, dp.mb, dp.rc, Ia, dp.mp, dp.g)
+        psif_sol = sol.x[0]
+        D_sol = dyn_general(y0, dt, dp_sol, tp, psif_sol, verbose=False, platform=platform, history=True)
+        Y_sol = D_sol['H']['Y']
+        Yd_sol = D_sol['H']['Yd']
+        Fm_sol = np.max(sling_tension(np.array(D_sol['H']['Y']), np.array(D_sol['H']['Yd']),
+                                      np.array(D_sol['H']['t']), dp_sol))
+        vpmag = np.linalg.norm(vp(D_sol['yf'], dp_sol))
+        with open('logfile', 'a') as f:
+            f.write('\n')
+            f.write('completed one iteration of vT(Ia)')
+        return {'val': -vpmag, 'x': sol.x} # as we want to maximize velocity
+        
+    # and now the top level optimizer
+    b = (tuple(bounds[2,:]),)
+    Ia0 = np.mean(b[0])
+    class X: pass # a place to store the x values found in vT
+    xi = X()
+    xi.x = 0
+    def vs(Ia):
+        res = vT(Ia)
+        xi.x = res['x'] # stores x for later use as a side-effect
+        return res['val']
+    sol = minimize(vs, Ia0, method='L-BFGS-B', bounds=b)
+    xsol = np.array([*xi.x, *sol.x]) # parts of x from both layers of optimization
+    dp_sol = dyn_params(dp.La, xsol[1], dp.ds, dp.mb, dp.rc, xsol[2], dp.mp, dp.g)
+    D_sol = dyn_general(y0, dt, dp_sol, tp, xsol[0], platform=platform, history=history, verbose=verbose)
+    H = None
+    if history:
+        H = D_sol['H']
+    return {'yf': D_sol['yf'], 'xopt': xsol, 'tf': D_sol['tf'], 'H': H, 'dp': dp_sol}
+
 def solver_wrapper(solver, solfile, outpipe, *args, **kwargs):
    # sol may be too big to fit in the outpipe. Since Python doesn't tell us what the size limits are, 
    # or even acknowledge their existence, we write to file instead
@@ -503,7 +564,9 @@ def puller_potential_energy(tp, theta0, plot=False, plotdomain=None, axPPE=None)
     # plotdomain is a tuple (xmin, xmax)
     p = np.array([tp.c10, tp.c9, tp.c8, tp.c7, tp.c6, tp.c5, tp.c4, tp.c3, tp.c2, tp.c1, tp.c0])
     R = np.roots(p)
+    warnings.filterwarnings('ignore')
     R = (R[np.argwhere((~np.iscomplex(R)) & (R<theta0))][:,0]).astype(float) # indexing fixes stupid argwhere BS
+    warnings.resetwarnings()
     # R is list containing the real roots of the torque function that are < theta0
     
     def tau(theta):
