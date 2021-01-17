@@ -16,7 +16,7 @@
 
 \title{CDT Documentation}
 \author{David Eade}
-\date{September 4, 2020}
+\date{January 17, 2021}
 
 \begin{document}
 
@@ -172,6 +172,12 @@ Two standard puller geometries are available to automate the process of finding 
 \item $r_c$: distance from axis of rotation to connection point of the drive rope that wraps around the "winch"
 \item $\beta$: angular distance arm would have to rotate in the throwing direction before the rope connection pointed toward the far end of the puller, with no rope left on the "winch". May be greater than one rotation, but $\beta_0 < 0$ will cause undefined behaviour.
 \item $d$: same as in Configuration A
+\end{description}
+\subsubsection{Force Parameters}
+\begin{description}
+\item $L_0$: $L$ is the total length of the puller, from the connection point on the frame to the connection point on the arm. If there is a rope wrapped around a pulley on the arm, its length is counted as well. $L_0$ refers to the length of the puller at some arbitrary starting condition. It can be convenient to set $L_0$ equal to the puller length at the specified initial conditions. This length is printed at the bottom of the torque source window for reference after running the first interpolation.
+\item $F_0$: the force applied by the puller when its length is $L_0$.
+\item $x_0$: only applies to the gas ram option. The initial length of the pressurised volume of the cylinder, before it extends. If instead of being closed the gas ram has a large inlet connecting it to a constant pressure source, $x_0$ can be set to a large value. Accurate treatment of inflow through restricted inlets is not currently available.
 \end{description}
 \subsubsection{Specifying Functions}
 \textbf{All puller forces and torques are specified in contraction!} If using rubber, the force measured during the draw will be about twice as large as the force applied during the throw, due to hysteresis. Incorrectly using the draw force rather than the contraction force will cause serious inaccuracies in this case. Most other means of mechanical energy storage do not suffer from this problem.\par
