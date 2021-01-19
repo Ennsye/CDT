@@ -5,7 +5,18 @@ setup(
     version="1.0.0",
     packages=find_packages(include=["CDTtools", "CDTtools.*"]),
     ext_modules=[
-        Extension("dynlib", sources=["src/dynlib.c"]),
+        Extension(
+            "dynlib",
+            sources=["src/dynlib.c"],
+            depends=["src/dynlib.h"],
+            export_symbols=[
+                "dyn_ode",
+                "dyn_ode_trough",
+                "T",
+                "dyn_step_RK4",
+                "dyn_step_trough_RK4",
+            ]
+        ),
     ],
     entry_points={
         "console_scripts": [

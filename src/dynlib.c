@@ -1,6 +1,15 @@
+#define PY_SSIZE_T_CLEAN
+#include <Python.h>
+
 # include "dynlib.h"
 # include <math.h>
 # include <stdio.h>
+
+PyMODINIT_FUNC
+PyInit_dynlib(void)
+{
+    return NULL;
+}
 
 double thetadd(double *y, double La, double Ls, double ds, double mb, double rc, double Ia, double mp, double g, double T_drive){
  double theta, thetad, psi, psid;
