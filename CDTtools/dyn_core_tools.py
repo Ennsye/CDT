@@ -1,5 +1,6 @@
 import copy
 import ctypes
+import importlib
 import numpy as np
 from numpy import cos, sin
 from numpy.ctypeslib import ndpointer
@@ -15,15 +16,14 @@ import warnings
 
 import matplotlib.animation as animation
 
+spec = importlib.util.find_spec('dynlib')
+
 parent_path = Path(__file__).parents[1]
 if os.name == 'nt':
-    libpath = os.path.abspath(os.path.join(parent_path, "build_windoze", "libdyn.dll"))
-    # due to horrifying numpy bug which causes problems system-wide, need absolute path here
-    lib = ctypes.WinDLL(libpath)
+    lib = ctypes.WinDLL(spec.origin)
     print("detected system: Windoze")
 elif os.name == 'posix':
-    libpath = os.path.abspath(os.path.join(parent_path, "build_linux", "libdyn.so"))
-    lib = ctypes.CDLL(libpath)
+    lib = ctypes.CDLL(spec.origin)
     print("detected system: GNU/LINUX")
 else:
     sys.exit("unsupported operating system")

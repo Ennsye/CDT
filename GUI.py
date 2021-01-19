@@ -1236,7 +1236,11 @@ class CDT_GUI:
         self._change_p2() # updates plot 2
         self._change_p1()
 
-if __name__ == "__main__":
+def main():
+    global root
     root = tk.Tk()
     gui = CDT_GUI(root)
     root.mainloop()
+
+if __name__ == "__main__":
+    main()
