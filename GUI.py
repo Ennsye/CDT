@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import tkinter as tk
 
 from matplotlib.backends.backend_tkagg import (
