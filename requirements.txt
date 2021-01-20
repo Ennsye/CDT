@@ -3,3 +3,4 @@ numpy==1.18.5
 scipy==1.4.1
 matplotlib==3.2.1
 sympy==1.6
+pyinstaller==4.2
