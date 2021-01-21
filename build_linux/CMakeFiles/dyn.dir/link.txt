@@ -1,1 +1,0 @@
-/usr/bin/cc -fPIC   -shared -Wl,-soname,libdyn.so -o libdyn.so CMakeFiles/dyn.dir/dynlib.c.o 

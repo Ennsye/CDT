@@ -1,3 +1,0 @@
-/run/media/david/Cirque/Punkin Chunkin/python/CDT/build_linux/CMakeFiles/rebuild_cache.dir
-/run/media/david/Cirque/Punkin Chunkin/python/CDT/build_linux/CMakeFiles/dyn.dir
-/run/media/david/Cirque/Punkin Chunkin/python/CDT/build_linux/CMakeFiles/edit_cache.dir
