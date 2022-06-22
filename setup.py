@@ -36,7 +36,7 @@ setup(
     ],
     install_requires=[
         "networkx==2.4",
-        "numpy==1.18.5",
+        "numpy==1.22.0",
         "scipy==1.4.1",
         "matplotlib==3.2.1",
         "sympy==1.6",
