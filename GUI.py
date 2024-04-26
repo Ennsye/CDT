@@ -565,6 +565,7 @@ class CDT_GUI:
                 target_name = G.nodes[node]['wname']
                 print("target name: ", target_name)
                 print("available names: ", pw_children_names)
+                print("Note that these errors can sometimes be caused by trying to open files created on different machines due to the inherent brittleness of the save code")
                 print('--- END ERROR ---\n')
                 
                 
@@ -851,34 +852,67 @@ class CDT_GUI:
         self.aniLengthE = tk.Entry(master=self.p1_conditional_controls, width=8)
         self.aniLengthE.grid(row=0, column=1)
         self.aniLengthE.insert(0, "2")
-        
                     
     def _run_animation(self, *args):
-        # Totally impossible to disable the play button while the animation is running
-        # it just can't be done, not with after or by any other means, in Tkinter, while
-        # keeping the rest of the GUI alive. Only other option is to implement animation directly in
-        # Tkinter using after. And that sounds like an unpleasant way to spend a day. The user
-        # is just going to have to deal with being able to make the plot glitch by hitting Play again
-        # it's not like it crashes the GUI or anything
+        # matplotlib FuncAnimation seems easy, but is more trouble than it's worth
+        # impossible to disable the play button while it's running, and doesn't work on all systems
+        self.play_button['state'] = 'disabled' # disable play button while animation is running
         self.fig1.clear()
-        self.ax1 = self.fig1.add_subplot(111)
         if hasattr(self, "sol"):
             if not self.sol is None:
-                h = self.sol['H']
                 # need to clean up data so it's evenly spaced in time using hist
                 # this also determines how long the animation runs (framerate is constant 25fps)
-                nframes = int(1 + 25*float(self.aniLengthE.get()))
-                # def y_hist(y0, dt, dp, tp, psif, N=0, platform=True):
-                # return {'ts': sample_times, 'ys': ys, 'yds': yds}
+                fps = 20
+                # frame delay depends on rendering delay
+                # and is changed as the animation runs and the real system-specific delay is measured
+                target_animation_runtime = float(self.aniLengthE.get())
+                nframes = int(1 + fps*target_animation_runtime)
                 I = CDTtools.dyn_core_tools.y_hist(self.y0, self.dt, self.dp, self.tp, 
                                                           self.sol['yf'][2], N=nframes, platform=self.p)
+                Y = I['ys']
+                t = I['ts']
+                Xp, Yp = CDTtools.dyn_core_tools.projectile_path(Y, self.dp, plot=False)
+                Xt = np.array([-self.dp.La*np.sin(Y[j, 0]) for j in range(len(t))])
+                Yt = np.array([self.dp.La*np.cos(Y[j, 0]) for j in range(len(t))])
+                xmin, xmax, ymin, ymax = (min(min(Xp), min(Xt)), max(max(Xp), max(Xt)), min(min(Yp), min(Yt)), max(max(Yp), max(Yt)))
+                # need all this so the frame size doesn't keep changing
+                xrange = xmax - xmin
+                yrange = ymax - ymin
+                
+                self.ax1 = self.fig1.add_subplot(111)
+                self.ax1.set_autoscale_on(False)
+                self.ax1.set_xlim(xmin-(xrange/8), xmax+(xrange/10))
+                self.ax1.set_ylim(ymin-(yrange/10), ymax+(yrange/6))
+                self.ax1.set_aspect('equal')
+                self.ax1.grid()
+                lobj1 = self.ax1.plot([], [], 'o-', lw=3)[0]
+                lobj2 = self.ax1.plot([], [], lw=1)[0]
+        
+                time_template = 'time = %.3fs'
+                time_text = self.ax1.text(0.05, 0.9, '', transform=self.ax1.transAxes)
+                artists = [lobj1, lobj2, time_text]
+     
+                artists[0].set_data([], [])
+                artists[1].set_data([], [])
+                artists[2].set_text('')
 
-                CDTtools.dyn_core_tools.launch_animation(I['ys'], self.dp, I['ts'],
-                                                         axLA=self.ax1, figLA=self.fig1)
-                self.canvas1.draw()
-                # DON'T try to make the Play button grey when the animation is running
-                # only way to do it is to completely scrap the use of FuncAnimation and
-                # roll your own using tkinter's after method
+                for i in range(nframes):
+                    t0 = time.time() # adaptively change the render delay as needed
+                    mechx = [0, Xt[i], Xp[i]]
+                    mechy = [0, Yt[i], Yp[i]]
+                    pathx = Xp[:i+1]
+                    pathy = Yp[:i+1]
+                    artists[0].set_data(mechx, mechy)
+                    artists[1].set_data(pathx, pathy)
+                    artists[2].set_text(time_template % t[i])
+                    self.canvas1.draw()
+                    root.update() # absolutely critical, you only get the last frame otherwise
+                    render_delay = time.time() - t0
+                    frame_delay = (1./fps) - render_delay # time to wait before starting
+                    # rendering of next frame
+                    root.after(int(1000 *  frame_delay)) # after works in ms
+
+        self.play_button['state'] = 'normal'
                 
                         
     def _check_solveproc(self):
@@ -1240,7 +1274,10 @@ def main():
     global root
     root = tk.Tk()
     gui = CDT_GUI(root)
-    root.mainloop()
+    try:
+        root.mainloop()
+    except Exception as e:
+        print(e)
 
 if __name__ == "__main__":
     multiprocessing.freeze_support()
