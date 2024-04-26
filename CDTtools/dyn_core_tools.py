@@ -14,8 +14,10 @@ import time
 import traceback
 import warnings
 
+import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
+import importlib.util
 spec = importlib.util.find_spec('dynlib')
 
 parent_path = Path(__file__).parents[1]
@@ -657,8 +659,8 @@ def projectile_path(Y, dp, plot=False, fname=None, scale_factor=1, axPP=None):
     
 def launch_animation(Y, dp, t, axLA=None, figLA=None):
     # animation of the throwing motion
-    # make sure to call on evenly spaced 
-#     theta = y[0]
+    # make sure to call on evenly spaced points (in time)
+    # plt.set_loglevel('debug') # verbose output for testing
     try:
         Xp, Yp = projectile_path(Y, dp, plot=False)
         Xt = np.array([-dp.La*np.sin(Y[i, 0]) for i in range(len(t))])
@@ -708,16 +710,12 @@ def launch_animation(Y, dp, t, axLA=None, figLA=None):
             artists[2].set_text(time_template % t[i])
             return artists
 
-        # testing
-        #for i in range(1, len(t)):
-            # animate_throw(i)
-
         ani = animation.FuncAnimation(figLA, animate_throw, range(1, len(t)),
                               interval=40, blit=True, init_func=init, repeat=False)
+        # ani.save('testmovie.mp4', writer='ffmpeg') # useful for debugging animation issues
         # interval is delay between frames in ms
         # any mistakes in the line defining ani are apparently handled with a try: ... except: pass sort of error handling logic
         # don't make mistakes!
-        #plt.show()
         return ani
     except Exception as e:
         # possibly the cleverest thing I've ever done: traceback logs from multiproc! :D
@@ -725,7 +723,8 @@ def launch_animation(Y, dp, t, axLA=None, figLA=None):
             f.write('\n')
             f.write(str(e))
             f.write(traceback.format_exc())
-        return 0
+        return 0        
+    
     
 def axle_reaction_force(Y, Yd, dp, t, plot=False, fname=None, ax_arf=None):
     # reaction load on axle, in base frame. This is the load APPLIED TO the axle, and is
