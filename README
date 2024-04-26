@@ -3,35 +3,21 @@ The tex source for the user manual is included. The manual itself can either be 
 https://www.overleaf.com/read/ftdshxybqrvt
 
 Linux
-The required dependencies for CDT are:
-python 3.8.3
-tkinter 8.6 (can't be pip installed due to tcl)
-networkx 2.4
-numpy 1.18.5
-scipy 1.4.1
-matplotlib 3.2.1
-
-Optional Dependencies:
-sympy 1.6
-
+The set of dependencies listed in requirements.txt have been tested and work as of 2024.
 Older and/or newer versions will probably work. Networkx underwent a significant syntax change in September 2017, so versions from before then likely won't work.
+Note that you will need a compiler toolchain.
 
-Build Instructions:
+Recommended procedure:
+Clone the repository
+Create a virtual environment (see the excellent explanation and guide at https://docs.python.org/3/tutorial/venv.html)
+Activate the venv and pip install the requirements
+Build using:
 $ python setup.py build_ext --inplace
 
 Running the GUI:
 Open the CDT directory in a terminal, and run:
 $ python GUI.py
 
-That's it! Dependencies can be installed directly on the system, or using a virtualenv (see the excellent explanation and guide at https://docs.python.org/3/tutorial/venv.html). 
+That's it!
 
-Windows
-Windows doesn't include Python by default, or, for that matter, a C compiler. This makes doing most computer-related things awkward at best, and leads one to wonder why people are still paying money for it. Unfortunately, we can't all escape Microsoft's grasping tentacles, especially if we rely on certain CAE tools.
-The easiest way to run CDT on Windows is to install Anaconda. This includes all(?)(check this) of the necessary dependencies. After installing Anaconda, open the CDT directory in an Anaconda Prompt and run:
-python GUI.py
-
-Windows Builds:
-Follow the instructions for windows here https://packaging.python.org/guides/packaging-binary-extensions/
-
-Linux Builds:
-Need a compiler toolchain, for debian/ubuntu installing build-essentials should be enough
+Windows support is not guaranteed, but has been tested and should work similarly to the above procedure.
