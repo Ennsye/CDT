@@ -1,6 +1,6 @@
-networkx==2.4
-numpy==1.18.5
-scipy==1.4.1
-matplotlib==3.2.1
-sympy==1.6
-pyinstaller==4.2
+networkx==3.3
+numpy==1.26.4
+scipy==1.13.0
+matplotlib==3.8.4
+sympy==1.12
+pyinstaller==6.6.0
